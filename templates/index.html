@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>🔢 Jogo da Álgebra e Tecnologia</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>💡 Jogo da Álgebra e Tecnologia</h1>
+        <p class="desc">Use sua intuição e a Álgebra Linear para adivinhar a palavra secreta!</p>
+
+        <div class="game-box">
+            <input type="text" id="palavra" placeholder="Digite sua tentativa..." autofocus>
+            <button id="btn-tentar">Tentar</button>
+            <button id="btn-reiniciar" class="secondary">Reiniciar</button>
+
+            <div id="resultado"></div>
+        </div>
+
+        <footer>
+            <p>Baseado em <b>Produto Escalar</b> e <b>Similaridade do Cosseno</b> 💻</p>
+        </footer>
+    </div>
+
+    <script>
+        const input = document.getElementById("palavra");
+        const resultado = document.getElementById("resultado");
+
+        document.getElementById("btn-tentar").addEventListener("click", async () => {
+            const palavra = input.value.trim();
+            if (!palavra) return;
+
+            const resp = await fetch("/tentar", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({palavra})
+            });
+
+            const data = await resp.json();
+
+            if (data.erro) {
+                resultado.innerHTML = `<p class="erro">${data.erro}</p>`;
+            } else if (data.venceu) {
+                resultado.innerHTML = `<p class="venceu">🎉 Parabéns! A palavra era <b>${data.palavra_secreta}</b>!</p>`;
+            } else {
+                resultado.innerHTML = `<p>Similaridade: <b>${data.similaridade}%</b></p>`;
+            }
+
+            input.value = "";
+        });
+
+        document.getElementById("btn-reiniciar").addEventListener("click", async () => {
+            await fetch("/reiniciar", { method: "POST" });
+            resultado.innerHTML = "<p class='info'>Nova palavra secreta gerada!</p>";
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,87 @@
+body {
+    background: linear-gradient(135deg, #0a0f24, #1a1f3a);
+    color: #fff;
+    font-family: 'Segoe UI', sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+}
+
+.container {
+    background: rgba(255, 255, 255, 0.08);
+    padding: 30px 40px;
+    border-radius: 16px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.4);
+    text-align: center;
+    width: 420px;
+}
+
+h1 {
+    color: #00f5ff;
+    margin-bottom: 10px;
+    font-size: 1.8rem;
+}
+
+.desc {
+    color: #bcdcff;
+    font-size: 0.95rem;
+    margin-bottom: 25px;
+}
+
+.game-box input {
+    width: 80%;
+    padding: 10px;
+    border: none;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    font-size: 1rem;
+}
+
+button {
+    padding: 10px 18px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    transition: all 0.2s;
+    margin: 5px;
+}
+
+button:hover {
+    transform: scale(1.05);
+}
+
+#btn-tentar {
+    background-color: #00f5ff;
+    color: #000;
+}
+
+.secondary {
+    background-color: #2f2f5f;
+    color: #fff;
+}
+
+#resultado {
+    margin-top: 20px;
+}
+
+.erro {
+    color: #ff6363;
+}
+
+.venceu {
+    color: #7fff9f;
+    font-size: 1.2rem;
+}
+
+.info {
+    color: #bcdcff;
+}
+
+footer {
+    margin-top: 20px;
+    font-size: 0.85rem;
+    color: #ccc;
+}
