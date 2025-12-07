@@ -28,6 +28,8 @@ def palavra_existe(palavra):
 
     palavra = palavra.strip().lower()
 
+    print(palavra)
+
     # REGRA 1: Filtro de tamanho e Whitelist
     # Se for menor que 4 letras, SÓ passa se estiver na nossa lista VIP.
     # Isso bloqueia: "asf", "wer", "dg", "se", "re"
@@ -50,3 +52,33 @@ def palavra_existe(palavra):
         return False
 
     return True
+
+
+def obter_singular(palavra):
+    """
+    Tenta passar para o singular. Se o resultado for uma palavra
+    que não existe (ex: 'onibu'), mantém a original.
+    """
+    if nlp is None: return palavra
+    
+    palavra = palavra.strip().lower()
+    doc = nlp(palavra)
+    token = doc[0]
+    
+    sugestao_singular = token.lemma_
+
+    # Se o spaCy não mudou nada, retorna logo
+    if sugestao_singular == palavra:
+        return palavra
+
+    # 🧠 A MÁGICA (Prova Real):
+    # Verifica se a palavra nova (ex: "onibu") existe no vocabulário
+    doc_teste = nlp(sugestao_singular)
+    
+    # Se a sugestão for desconhecida (is_oov), o spaCy "quebrou" a palavra.
+    # Nesse caso, ignoramos a sugestão e devolvemos a original.
+    if doc_teste[0].is_oov:
+        return palavra
+
+    # Se a sugestão existe (ex: "carro"), retorna ela.
+    return sugestao_singular
