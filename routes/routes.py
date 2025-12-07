@@ -406,15 +406,16 @@ def tentar():
     # Obtém a palavra tentada
     tentativa = request.json.get('palavra', '').lower().strip()
 
-    # ------ ALTERAÇÕES DA BRANCH FIX/VALIDAÇÃO-INPUT ------
-    # Usa a função do seu arquivo auxiliar
+
+    if teste_filtro.possui_caracteres_invalidos(tentativa):
+        return jsonify({"erro": "Não utilize números ou símbolos, apenas letras!"})
+
     if not teste_filtro.palavra_existe(tentativa):
         return jsonify({"erro": "Palavra desconhecida ou inválida! Verifique a ortografia."})
     
-    # 2. ✨ CONVERTE PARA O SINGULAR AQUI ✨
     tentativa = teste_filtro.obter_singular(tentativa)
-    # ------------------------------------------------------
-    
+
+
     if not tentativa:
         return jsonify({"erro": "Digite uma palavra válida."})
     

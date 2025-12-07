@@ -53,7 +53,6 @@ def palavra_existe(palavra):
 
     return True
 
-
 def obter_singular(palavra):
     """
     Normaliza singular e gênero com proteção contra "Testa" -> "Testo".
@@ -107,3 +106,17 @@ def obter_singular(palavra):
                 return tentativa_o
 
     return resultado
+
+def possui_caracteres_invalidos(palavra):
+    """
+    Retorna True se a palavra tiver números ou símbolos (ex: 't3ste', 'c++', '@mail').
+    Retorna False se tiver apenas letras (ex: 'teste', 'email').
+    """
+    palavra = palavra.strip()
+    
+    # O método .isalpha() do Python retorna False se houver 
+    # qualquer coisa que não seja letra (número, espaço, símbolo).
+    if not palavra.isalpha():
+        return True # Tem erro (caractere inválido)
+        
+    return False # Está limpa
