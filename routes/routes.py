@@ -415,6 +415,8 @@ def tentar():
     
     tentativa = teste_filtro.obter_singular(tentativa)
 
+    tentativa = teste_filtro.remover_diminutivo(tentativa)
+
 
     if not tentativa:
         return jsonify({"erro": "Digite uma palavra válida."})

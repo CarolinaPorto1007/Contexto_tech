@@ -120,3 +120,80 @@ def possui_caracteres_invalidos(palavra):
         return True # Tem erro (caractere inválido)
         
     return False # Está limpa
+
+def remover_diminutivo(palavra):
+    """
+    Remove sufixos de diminutivo (-inho, -zinho) se a raiz for uma palavra válida.
+    Ex: 'computadorzinho' -> 'computador', 'carrinho' -> 'carro'.
+    """
+    if nlp is None: return palavra
+    
+    # Caso A: Sufixo -zinho / -zinha (Remove 5 letras)
+    # Ex: Computadorzinho -> Computador
+    if palavra.endswith(('zinho', 'zinha')):
+        raiz = palavra[:-5]
+        if not nlp(raiz)[0].is_oov:
+            return raiz
+            
+    # Caso B: Sufixo -inho (Remove 4 letras e tenta por 'o')
+    # Ex: Carrinho -> Carr -> Carro
+    elif palavra.endswith('inho'):
+        raiz = palavra[:-4] + 'o'
+        if not nlp(raiz)[0].is_oov:
+            return raiz
+
+    # Caso C: Sufixo -inha (Remove 4 letras e tenta por 'a')
+    # Ex: Casinha -> Cas -> Casa
+    elif palavra.endswith('inha'):
+        raiz = palavra[:-4] + 'a'
+        if not nlp(raiz)[0].is_oov:
+            return raiz
+            
+    # Se não for diminutivo ou se a raiz não existir (ex: 'caminho'), retorna original
+    return palavra
+
+
+def obter_singular(palavra):
+    """
+    Normaliza singular e gênero.
+    """
+    if nlp is None: return palavra
+    
+    palavra = palavra.strip().lower()
+    doc = nlp(palavra)
+    token = doc[0]
+    
+    # --- 1. Singular via spaCy ---
+    sugestao_singular = token.lemma_
+
+    if sugestao_singular == palavra:
+        resultado = palavra
+    else:
+        doc_teste = nlp(sugestao_singular)
+        if doc_teste[0].is_oov:
+            resultado = palavra
+        else:
+            resultado = sugestao_singular
+
+    # --- 2. Correção de Plural Feminino ('as') ---
+    if resultado.endswith('as'):
+        sem_s = resultado[:-1] 
+        if not nlp(sem_s)[0].is_oov:
+            resultado = sem_s
+
+    # --- 3. Masculinização ('a' -> 'o') ---
+    if resultado.endswith('a'):
+        tentativa_o = resultado[:-1] + 'o'
+        if len(tentativa_o) > 3 and not nlp(tentativa_o)[0].is_oov:
+            resultado = tentativa_o 
+        else:
+            tentativa_cortada = resultado[:-1]
+            terminacoes_validas = ('r', 's', 'z', 'l', 'm', 'n')
+            
+            if (len(tentativa_cortada) > 2 
+                and not nlp(tentativa_cortada)[0].is_oov 
+                and tentativa_cortada.endswith(terminacoes_validas)):
+                resultado = tentativa_cortada
+
+    # --- 4. CHAMA A NOVA FUNÇÃO AQUI NO FINAL 👇 ---
+    return remover_diminutivo(resultado)
