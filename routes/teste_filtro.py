@@ -56,8 +56,7 @@ def palavra_existe(palavra):
 
 def obter_singular(palavra):
     """
-    Tenta passar para o singular. Se o resultado for uma palavra
-    que não existe (ex: 'onibu'), mantém a original.
+    Normaliza singular e gênero com proteção contra "Testa" -> "Testo".
     """
     if nlp is None: return palavra
     
@@ -65,20 +64,46 @@ def obter_singular(palavra):
     doc = nlp(palavra)
     token = doc[0]
     
+    # 1. Singular via spaCy
     sugestao_singular = token.lemma_
 
-    # Se o spaCy não mudou nada, retorna logo
     if sugestao_singular == palavra:
-        return palavra
+        resultado = palavra
+    else:
+        # Prova Real
+        doc_teste = nlp(sugestao_singular)
+        if doc_teste[0].is_oov:
+            resultado = palavra
+        else:
+            resultado = sugestao_singular
 
-    # 🧠 A MÁGICA (Prova Real):
-    # Verifica se a palavra nova (ex: "onibu") existe no vocabulário
-    doc_teste = nlp(sugestao_singular)
-    
-    # Se a sugestão for desconhecida (is_oov), o spaCy "quebrou" a palavra.
-    # Nesse caso, ignoramos a sugestão e devolvemos a original.
-    if doc_teste[0].is_oov:
-        return palavra
+    # 2. Correção de Plural Feminino ('as')
+    if resultado.endswith('as'):
+        sem_s = resultado[:-1] 
+        if not nlp(sem_s)[0].is_oov:
+            resultado = sem_s
 
-    # Se a sugestão existe (ex: "carro"), retorna ela.
-    return sugestao_singular
+    # 3. Masculinização Controlada
+    if resultado.endswith('a'):
+        
+        # A) Tenta apenas REMOVER o 'a' (Programadora -> Programador)
+        # É a regra mais segura.
+        tentativa_cortada = resultado[:-1]
+        terminacoes_validas = ('r', 's', 'z', 'l', 'm', 'n')
+        
+        if (len(tentativa_cortada) > 2 
+            and not nlp(tentativa_cortada)[0].is_oov 
+            and tentativa_cortada.endswith(terminacoes_validas)):
+            return tentativa_cortada
+            
+        # B) Tenta trocar 'a' por 'o', MAS SÓ PARA SUFIXOS SEGUROS
+        # Isso evita Testa->Testo, Mesa->Meso, Porta->Porto
+        # Aceita: Engenheira->Engenheiro, Usuária->Usuário, Aluna->Aluno
+        sufixos_seguros = ('eira', 'ria', 'na', 'oa')
+        
+        if resultado.endswith(sufixos_seguros):
+            tentativa_o = resultado[:-1] + 'o'
+            if not nlp(tentativa_o)[0].is_oov:
+                return tentativa_o
+
+    return resultado
