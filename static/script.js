@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const progressBar = document.getElementById('progressBar');
     const tentativas = document.getElementById('tentativas');
     const contador = document.getElementById('contador');
-    const hintButton = document.getElementById('hintButton');
+    // const hintButton = document.getElementById('hintButton');
     const giveUpButton = document.getElementById('giveUpButton');
 
     let totalTentativas = 0;
@@ -126,7 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
         );
         input.disabled = true;
         button.disabled = true;
-        hintButton.remove();
+        // hintButton.remove();
         giveUpButton.remove();
         button.style.opacity = '0.5';
         button.style.cursor = 'not-allowed';
@@ -167,9 +167,9 @@ function openModal(modalName) {
     modal.classList.add('active');
 
     // Se for modal de dica, busca a dica
-    if (modalName === 'hint') {
-        buscarDica();
-    }
+    // if (modalName === 'hint') {
+    //     buscarDica();
+    // }
 
     // Previne scroll do body
     document.body.style.overflow = 'hidden';
@@ -190,24 +190,24 @@ window.addEventListener('click', (e) => {
 });
 
 // Buscar dica do servidor
-async function buscarDica() {
-    const hintText = document.getElementById('hintText');
-    hintText.textContent = 'Carregando dica...';
+// async function buscarDica() {
+//     const hintText = document.getElementById('hintText');
+//     hintText.textContent = 'Carregando dica...';
 
-    try {
-        const response = await fetch('/dica');
-        const data = await response.json();
+//     try {
+//         const response = await fetch('/dica');
+//         const data = await response.json();
 
-        if (data.erro) {
-            hintText.textContent = data.erro;
-        } else {
-            hintText.textContent = data.dica;
-        }
-    } catch (error) {
-        console.error('Erro ao buscar dica:', error);
-        hintText.textContent = '❌ Erro ao carregar dica. Tente novamente.';
-    }
-}
+//         if (data.erro) {
+//             hintText.textContent = data.erro;
+//         } else {
+//             hintText.textContent = data.dica;
+//         }
+//     } catch (error) {
+//         console.error('Erro ao buscar dica:', error);
+//         hintText.textContent = '❌ Erro ao carregar dica. Tente novamente.';
+//     }
+// }
 
 // Revelar palavra (desistir)
 async function revealWord() {
@@ -237,7 +237,7 @@ async function revealWord() {
             // Desabilita o jogo
             document.getElementById('palavraInput').disabled = true;
             document.getElementById('tentarBtn').disabled = true;
-            hintButton.remove();
+            // hintButton.remove();
             giveUpButton.remove();
             document.getElementById('tentarBtn').style.opacity = '0.5';
             document.getElementById('feedback').textContent = '⏰ Volte amanhã para uma nova palavra!';
@@ -260,7 +260,7 @@ async function carregarStats() {
                 `✅ Desafio completo! Volte em ${data.proximo_reset} para uma nova palavra.`;
             document.getElementById('feedback').style.color = '#00d4ff';
             document.getElementById('palavraInput').disabled = true;
-            hintButton.remove();
+            // hintButton.remove();
             giveUpButton.remove();
             document.getElementById('tentarBtn').disabled = true;
             document.getElementById('tentarBtn').style.opacity = '0.5';
