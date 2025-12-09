@@ -63,25 +63,3 @@ try:
 except Exception as e:
     print(f"❌ Erro crítico: {e}")
     word2vec = None
-
-
-
-
-
-
-
-
-if word2vec:
-    palavra_teste = "computador" # Troque pela palavra que quiser testar
-
-    print(f"\n🔍 Buscando similares para: '{palavra_teste}'")
-
-    try:
-        # Busca as 10 palavras mais próximas
-        resultado = word2vec.most_similar(palavra_teste, topn=10)
-        
-        for palavra, score in resultado:
-            print(f" -> {palavra} (Similaridade: {score:.2f})")
-            
-    except KeyError:
-        print(f"⚠️ A palavra '{palavra_teste}' não existe no modelo filtrado.")
