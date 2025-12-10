@@ -521,7 +521,7 @@ def formatar_palavra(palavra):
     Formata a palavra para exibição (primeira letra maiúscula).
     """
     if not(palavra_existe(palavra)):
-        return "NAO ENCONTROU PALAVRA"
+        return False
     
     palavra = padronizar_plural(palavra)
     palavra = padronizar_genero(palavra)

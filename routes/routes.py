@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 import hashlib
 
 # Arquivos auxiliares
-from routes import teste_filtro
+from routes import input_filter
 from routes.model_loader import word2vec
 
 """
@@ -398,25 +398,11 @@ def tentar():
     # Obtém a palavra tentada
     tentativa = request.json.get('palavra', '').lower().strip()
 
-    tentativa = teste_filtro.remover_aumentativo(tentativa)
 
-    tentativa = teste_filtro.remover_diminutivo(tentativa)
-
-    tentativa = teste_filtro.obter_singular(tentativa)
-
-    if teste_filtro.possui_caracteres_invalidos(tentativa):
-        return jsonify({"erro": "Não utilize números ou símbolos, apenas letras!"})
-
-    if not teste_filtro.palavra_existe(tentativa):
+    tentativa = input_filter.formatar_palavra(tentativa)
+    if tentativa == False:
         return jsonify({"erro": "Palavra desconhecida ou inválida! Verifique a ortografia."})
     
-
-    if not tentativa:
-        return jsonify({"erro": "Digite uma palavra válida."})
-    
-    # Verifica se é palavra única
-    if ' ' in tentativa:
-        return jsonify({"erro": "Apenas palavras únicas são aceitas (sem espaços)."})
     
     # Verifica se já tentou essa palavra
     if tentativa in tentativas_historico:
