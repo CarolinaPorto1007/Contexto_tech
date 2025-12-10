@@ -116,8 +116,8 @@ def padronizar_plural(palavra):
 
 def padronizar_genero(palavra):
     """
-    Recebe uma palavra (provavelmente já no singular) e tenta achar 
-    sua versão masculina no banco.
+    Tenta converter feminino para masculino.
+    Contém Lista de Proteção para evitar mudanças de sentido (Ex: Casa -> Caso).
     """
     original = palavra.lower().strip()
     
@@ -125,91 +125,146 @@ def padronizar_genero(palavra):
     if not original.endswith(('a', 'ã')):
         return original
 
+    # --- LISTA DE PROTEÇÃO (Falsos Femininos) ---
+    # Palavras terminadas em 'a' que mudam de sentido se virarem 'o',
+    # ou que simplesmente não têm masculino por flexão direta.
+    protegidas = [
+        'casa',   # Evita 'caso'
+        'bola',   # Evita 'bolo'
+        'mala',   # Evita 'malo' (arcaico/espanhol)
+        'fala',   # Evita 'falo' (verbo/substantivo anatômico)
+        'bota',   # Evita 'boto' (animal)
+        'cola',   # Evita 'colo'
+        'mola',   # Evita 'molo'
+        'sola',   # Evita 'solo'
+        'lata',   # Evita 'lato' (amplo)
+        'mata',   # Evita 'mato' (grama)
+        'vela',   # Evita 'velo' (lã)
+        'pipa',   # Evita 'pipo'
+        'rosa',   # Evita 'roso'
+        'palha',  # Evita 'palho'
+        'folha',  # Evita 'folho'
+        'caixa',  # Evita 'caixo'
+        'cabra',  # Evita 'cabro'
+        'fera',   # Evita 'fero'
+        'brasa',  # Evita 'braso'
+        'tropa',  # Evita 'tropo'
+        'prata',  # Evita 'prato'
+        'cama',   # Evita 'camo'
+        'lama',   # Evita 'lamo'
+        'grama',  # Evita 'gramo'
+        'dama',   # Evita 'damo' (embora exista, raramente é o par desejado)
+        'baleia', # Evita 'baleio'
+        'aranha', # Evita 'aranho'
+        'faca'    # Evita 'faco' (se existir no banco)
+    ]
+
+    if original in protegidas:
+        return original
+
     # --- TENTATIVAS (Candidatos a Masculino) ---
 
     # 1. Regra -ESA/-ESSA (Portuguesa -> Português)
     if original.endswith('esa'):
-        candidato_masc = original[:-3] + 'ês'
-        if palavra_existe(candidato_masc): return candidato_masc
+        candidato = original[:-3] + 'ês'
+        if palavra_existe(candidato): return candidato
 
-    # 2. Regra -ONA/-OA (Valentona -> Valentão)
+    if original.endswith('essa'):
+        candidato = original[:-4] + 'e' # Abadessa -> Abade, Condessa -> Conde
+        if palavra_existe(candidato): return candidato
+
+    # 2. Regra -ONA (Valentona -> Valentão)
     if original.endswith('ona'):
-        candidato_masc = original[:-3] + 'ão'
-        if palavra_existe(candidato_masc): return candidato_masc
+        candidato = original[:-3] + 'ão'
+        if palavra_existe(candidato): return candidato
         
-    # 3. Regra Geral: Troca 'a' por 'o' (Menina -> Menino)
+    # 3. Regra -Ã (Irmã -> Irmão)
+    if original.endswith('ã'):
+        candidato = original[:-1] + 'ão'
+        if palavra_existe(candidato): return candidato
+
+    # 4. Regra Geral: Troca 'a' por 'o' (Menina -> Menino)
     if original.endswith('a'):
-        candidato_masc = original[:-1] + 'o'
-        if palavra_existe(candidato_masc): return candidato_masc
+        candidato = original[:-1] + 'o'
+        if palavra_existe(candidato): return candidato
 
-    # 4. Regra de Corte: Apenas tira o 'a' (Professora -> Professor)
-    candidato_masc = original[:-1]
-    if len(candidato_masc) > 2 and palavra_existe(candidato_masc): 
-        return candidato_masc
+    # 5. Regra de Corte: Apenas tira o 'a' (Professora -> Professor)
+    candidato = original[:-1]
+    if len(candidato) > 2 and palavra_existe(candidato): 
+        return candidato
 
-    # Se nenhum candidato masculino existe no banco, retorna a original
     return original
 
 def padronizar_grau(palavra):
     """
-    Tenta remover sufixos de diminutivo e aumentativo (assumindo palavra no singular).
-    Retorna a forma normal SE ela existir no banco.
-    Caso contrário, retorna a palavra original.
+    Remove diminutivos/aumentativos e tenta restaurar acentos perdidos.
+    Ex: Pezão -> Pé, Cafezinho -> Café.
     """
     original = palavra.lower().strip()
     
-    # Palavras muito curtas raramente são graus derivados
     if len(original) < 4:
         return original
 
-    candidato_normal = ""
-
     # --- REGRA 1: Diminutivos com -ZINHO / -ZINHA ---
-    # (Pezinho -> Pé, Florzinha -> Flor)
-    # Remove o sufixo inteiro, pois o 'z' geralmente é de ligação
     if original.endswith(('zinho', 'zinha')):
-        candidato_normal = original[:-5]
-        if palavra_existe(candidato_normal): return candidato_normal
+        # Tenta remover o sufixo inteiro (Pezinho -> Pe)
+        base = original[:-5]
+        
+        if palavra_existe(base): return base
+        
+        # Tenta repor acentos (Pezinho -> Pe -> Pé / Cafezinho -> Cafe -> Café)
+        if base and base[-1] in 'aeo':
+            # Tenta Agudo (á, é, ó)
+            mapa_agudo = {'a': 'á', 'e': 'é', 'o': 'ó'}
+            candidato = base[:-1] + mapa_agudo[base[-1]]
+            if palavra_existe(candidato): return candidato
+            
+            # Tenta Circunflexo (â, ê, ô)
+            mapa_circ = {'a': 'â', 'e': 'ê', 'o': 'ô'}
+            candidato = base[:-1] + mapa_circ[base[-1]]
+            if palavra_existe(candidato): return candidato
 
     # --- REGRA 2: Diminutivos com -INHO / -INHA ---
-    # (Gatinho -> Gato, Casinha -> Casa, Menininho -> Menino)
     if original.endswith(('inho', 'inha')):
-        base = original[:-4] # Remove o sufixo
-        
-        # Tenta repor vogais temáticas (o, a, e)
+        base = original[:-4]
+        # Ex: Gatinho -> Gato, Casinha -> Casa
         for vogal in ['o', 'a', 'e']:
             if palavra_existe(base + vogal): return base + vogal
-            
-        # Tenta a base pura (ex: Pastorinho -> Pastor)
         if palavra_existe(base): return base
 
     # --- REGRA 3: Aumentativos com -ZÃO / -ZONA ---
-    # (Pezão -> Pé)
-    if original.endswith('zão'):
-        candidato_normal = original[:-3]
-        if palavra_existe(candidato_normal): return candidato_normal
+    if original.endswith(('zão', 'zona')):
+        # Remove 'zão'/'zona' (Pezão -> Pe)
+        sufixo = 3 if original.endswith('zão') else 4
+        base = original[:-sufixo]
 
-    if original.endswith('zona'):
-        candidato_normal = original[:-4]
-        if palavra_existe(candidato_normal): return candidato_normal
+        if palavra_existe(base): return base
+
+        # Tenta repor acentos (Pezão -> Pe -> Pé)
+        if base and base[-1] in 'aeo':
+            mapa_agudo = {'a': 'á', 'e': 'é', 'o': 'ó'}
+            candidato = base[:-1] + mapa_agudo[base[-1]]
+            if palavra_existe(candidato): return candidato
+            
+            mapa_circ = {'a': 'â', 'e': 'ê', 'o': 'ô'}
+            candidato = base[:-1] + mapa_circ[base[-1]]
+            if palavra_existe(candidato): return candidato
 
     # --- REGRA 4: Aumentativos com -ÃO / -ONA ---
-    # (Gatão -> Gato, Mulherona -> Mulher)
+    # (Rapazão -> Rapaz, Mulherona -> Mulher)
     if original.endswith('ão'):
         base = original[:-2]
-        # Tenta repor 'o' (Gatão -> Gato)
+        # Gatão -> Gato
         if palavra_existe(base + 'o'): return base + 'o'
-        # Tenta base pura (Mulherão -> Mulher)
+        # Rapazão -> Rapaz (base pura)
         if palavra_existe(base): return base
 
     if original.endswith('ona'):
         base = original[:-3]
-        # Tenta repor 'a' (Gatona -> Gata)
         if palavra_existe(base + 'a'): return base + 'a'
-        # Tenta base pura
         if palavra_existe(base): return base
 
-    # --- REGRA 5: Sufixos -ITO / -ITA (Opcional: Livrito -> Livro) ---
+    # --- REGRA 5: Sufixos -ITO / -ITA ---
     if original.endswith(('ito', 'ita')):
         base = original[:-3]
         if palavra_existe(base + 'o'): return base + 'o'
@@ -326,124 +381,136 @@ def padronizar_verbo(palavra):
 def padronizar_derivacoes(palavra):
     """
     Tenta remover sufixos nominais (profissão, qualidade, ação) para encontrar a palavra raiz.
-    Ex: Pedreiro -> Pedra, Famoso -> Fama, Rapidamente -> Rápido.
+    Contém proteção contra "falsos positivos" (ex: Coração não vira Corar).
     """
     original = palavra.lower().strip()
     
-    # Evita processar palavras muito curtas
-    if len(original) < 5:
+    # Trava de segurança para palavras muito curtas (pão, mão, céu, lei)
+    if len(original) < 4:
         return original
 
-    # --- 1. ADVÉRBIOS (-MENTE) ---
-    # Ex: Rapidamente -> Rápido, Felizmente -> Feliz
+    # --- 1. BLOCO DE TRATAMENTO DE -ÃO / -ÇÃO (O mais crítico) ---
+    if original.endswith('ão'):
+        # A. LISTA DE PROTEÇÃO (Colisões Semânticas)
+        # Palavras que parecem derivadas/aumentativos, mas se mudar o sufixo,
+        # viram outra palavra com sentido totalmente errado.
+        protegidas = [
+            'coração', 'coracao', # Evita 'corar'
+            'nação', 'nacao',     # Evita 'nar' (se existisse) ou 'naça'
+            'ração', 'racao',     # Evita 'rar'
+            'fração', 'fracao',
+            'canção', 'cancao',
+            'feijão', 'feijao',
+            'violão', 'violao',   # Evita 'viola' (sentido diferente)
+            'avião', 'aviao',
+            'verão', 'verao',     # Evita 'ver'
+            'melão', 'melao',     # Evita 'melar'
+            'leão', 'leao',
+            'camaleão', 'camaleao',
+            'furacão', 'furacao', # Evita 'furar'
+            'tubarão', 'tubarao',
+            'mão', 'mao', 'pão', 'pao', 'chão', 'chao' # Curtas já barram no len, mas reforçando
+        ]
+        
+        if original in protegidas:
+            return original
+
+        base_sem_ao = original[:-2]
+
+        # B. TENTATIVA: AUMENTATIVO MASCULINO (-ÃO -> -O)
+        # Prioridade: Substantivo (Portão -> Porta, Prato -> Pratão)
+        candidato = base_sem_ao + 'o'
+        if palavra_existe(candidato): return candidato
+
+        # C. TENTATIVA: AUMENTATIVO FEMININO (-ÃO -> -A)
+        # Prioridade: Substantivo (Muralhão -> Muralha)
+        candidato = base_sem_ao + 'a'
+        if palavra_existe(candidato): return candidato
+
+        # D. TENTATIVA: DERIVAÇÃO VERBAL (-ÇÃO -> -R / -AR)
+        # Só entra aqui se não for aumentativo de nada existente
+        if original.endswith('ção'):
+            base_sem_cao = original[:-3]
+            # Ex: Criação -> Criar
+            if palavra_existe(base_sem_cao + 'r'): return base_sem_cao + 'r'
+            # Ex: Navegação -> Navegar
+            if palavra_existe(base_sem_cao + 'ar'): return base_sem_cao + 'ar'
+
+        # Se falhou em tudo, retorna original (Ex: Balão -> Balo? Bala? Balar? Não.)
+        return original
+
+    # --- 2. AÇÃO E RESULTADO (-MENTO) ---
+    if original.endswith('mento'):
+        base = original[:-5]
+        if palavra_existe(base + 'r'): return base + 'r' # Casamento -> Casar
+        if palavra_existe(base): return base # Monitoramento -> Monitor
+
+    # --- 3. ADVÉRBIOS (-MENTE) ---
     if original.endswith('mente'):
         base = original[:-5]
-        # Tenta a base pura (Felizmente -> Feliz)
         if palavra_existe(base): return base
-        # Tenta voltar para o masculino (Rapidamente -> Rápida -> Rápido)
         if base.endswith('a'):
             candidato = base[:-1] + 'o'
             if palavra_existe(candidato): return candidato
 
-    # --- 2. PROFISSÕES E ÁRVORES (-EIRO / -EIRA / -ISTA) ---
-    # Ex: Pedreiro -> Pedra, Bananeira -> Banana, Dentista -> Dente
+    # --- 4. PROFISSÕES E ÁRVORES (-EIRO / -EIRA / -ISTA) ---
     if original.endswith(('eiro', 'eira')):
-        base = original[:-4] # Remove 'eiro'
-        # Tenta vogais temáticas
+        base = original[:-4]
         if palavra_existe(base + 'a'): return base + 'a' # Pedr-a
         if palavra_existe(base + 'o'): return base + 'o' # Livr-o
-        if palavra_existe(base + 'e'): return base + 'e' # Leit-e (Leiteiro)
-        # Tenta final 'ão' (Limoeiro -> Limo -> Limão é exceção, mas 'Melão' -> 'Meloeiro' segue regra se tirar o 'o')
-        if base.endswith('o'):
-             if palavra_existe(base[:-1] + 'ão'): return base[:-1] + 'ão'
+        if palavra_existe(base + 'e'): return base + 'e' # Leit-e
+        if base.endswith('o') and palavra_existe(base[:-1] + 'ão'): 
+            return base[:-1] + 'ão' # Limão -> Limoeiro
 
     if original.endswith('ista'):
-        base = original[:-4] # Remove 'ista'
-        # Ex: Jornalista -> Jornal
-        if palavra_existe(base): return base
-        # Ex: Dentista -> Dente, Paulista -> Paulo
-        if palavra_existe(base + 'e'): return base + 'e'
+        base = original[:-4]
+        if palavra_existe(base): return base # Jornal
+        if palavra_existe(base + 'a'): return base + 'a' 
         if palavra_existe(base + 'o'): return base + 'o'
-        if palavra_existe(base + 'a'): return base + 'a'
 
-    # --- 3. QUALIDADE E ESTADO (-EZ / -EZA / -DADE / -URA / -ISMO) ---
-    # Ex: Beleza -> Belo, Rapidez -> Rápido
+    # --- 5. QUALIDADE E ESTADO (-EZ / -EZA / -DADE / -URA / -ISMO) ---
     if original.endswith(('eza', 'ez')):
-        # Remove sufixo (considerando 'ez' tamanho 2 e 'eza' tamanho 3)
-        tamanho_sufixo = 3 if original.endswith('eza') else 2
-        base = original[:-tamanho_sufixo]
-        
+        tamanho = 3 if original.endswith('eza') else 2
+        base = original[:-tamanho]
         if palavra_existe(base + 'o'): return base + 'o' # Bel-o
-        if palavra_existe(base + 'e'): return base + 'e' # Lev-e
-        if palavra_existe(base): return base # Lucid-ez -> Lúcid (não, Lúcido). Timid-ez -> Tímido.
+        if palavra_existe(base): return base # Lucid-ez
 
-    # Ex: Felicidade -> Feliz, Bondade -> Bom, Lealdade -> Leal
     if original.endswith('dade'):
         base = original[:-4]
-        # Regra do 'ci' -> 'z' (Felicidade -> Feli-z, Capacidade -> Capa-z)
-        if base.endswith('ci'):
-            candidato = base[:-2] + 'z'
-            if palavra_existe(candidato): return candidato
-        # Regra do 'n' -> 'm' (Bondade -> Bom)
-        if base.endswith('n'):
-             candidato = base[:-1] + 'm'
-             if palavra_existe(candidato): return candidato
-        # Base pura (Lealdade -> Leal)
-        if palavra_existe(base): return base
-        # Remove vogal de ligação 'i' (Habilidade -> Habil -> Hábil)
-        if base.endswith('i') and palavra_existe(base[:-1] + 'il'):
-             return base[:-1] + 'il'
+        if base.endswith('ci'): # Felicidade -> Feliz
+            if palavra_existe(base[:-2] + 'z'): return base[:-2] + 'z'
+        if base.endswith('n'): # Bondade -> Bom
+             if palavra_existe(base[:-1] + 'm'): return base[:-1] + 'm'
+        if palavra_existe(base): return base # Leal
+        if base.endswith('i') and palavra_existe(base[:-1] + 'il'): return base[:-1] + 'il' # Habilidade
 
-    # Ex: Realismo -> Real
     if original.endswith('ismo'):
         base = original[:-4]
         if palavra_existe(base): return base
-        if palavra_existe(base + 'o'): return base + 'o' # Arcaísmo -> Arcaico (difícil sem mapa)
+        if palavra_existe(base + 'o'): return base + 'o'
 
-    # Ex: Altura -> Alto, Doçura -> Doce
     if original.endswith('ura'):
         base = original[:-3]
-        if palavra_existe(base + 'o'): return base + 'o' # Alt-o
-        if palavra_existe(base + 'e'): return base + 'e' # Doc-e (Doçura tem cedilha, Doce não. Difícil automação simples)
+        if palavra_existe(base + 'o'): return base + 'o'
+        if palavra_existe(base + 'e'): return base + 'e'
 
-    # --- 4. AÇÃO E RESULTADO (-MENTO / -ÇÃO) ---
-    # Ex: Casamento -> Casar
-    if original.endswith('mento'):
-        base = original[:-5]
-        if palavra_existe(base + 'r'): return base + 'r' # Casar
-
-    # Ex: Criação -> Criar, Navegação -> Navegar
-    if original.endswith('ção'):
-        base = original[:-3]
-        if palavra_existe(base + 'r'): return base + 'r' # Criar
-        # Tenta reconstruir 'ar' (Navegação -> Naveg -> Navegar)
-        if palavra_existe(base + 'ar'): return base + 'ar'
-
-    # --- 5. ADJETIVOS (-OSO / -AL / -VEL / -ANO) ---
-    # Ex: Famoso -> Fama
+    # --- 6. ADJETIVOS (-OSO / -AL / -VEL) ---
     if original.endswith(('oso', 'osa')):
         base = original[:-3]
-        if palavra_existe(base + 'a'): return base + 'a' # Fam-a
-        if palavra_existe(base + 'o'): return base + 'o' # Gost-o
+        if palavra_existe(base + 'o'): return base + 'o'
+        if palavra_existe(base + 'a'): return base + 'a'
 
-    # Ex: Mundial -> Mundo, Nacional -> Nação
     if original.endswith('al'):
         base = original[:-2]
-        if palavra_existe(base + 'o'): return base + 'o' # Mund-o
-        # Nacion-al -> Nação (Troca 'n' por 'ção' ou apenas reconstrói)
-        # Difícil generalizar sem quebrar outras palavras (ex: Animal -> Anim?)
+        if palavra_existe(base + 'o'): return base + 'o'
 
-    # Ex: Amável -> Amar, Possível -> Poder
-    if original.endswith('vel'):
-        # Geralmente troca 'vel' por 'r' e ajusta vogal anterior (Amável -> Ama -> Amar)
-        # Amável (remove vel) -> Amá -> Amar (remove acento)
+    if original.endswith('vel'): # Amável -> Amar
         base = original[:-3]
-        if base.endswith(('á', 'í', 'e')): # Amável, Possível, Legível
-             # Remove acento
-             mapa_acento = {'á': 'a', 'í': 'i', 'é': 'e'}
-             sem_acento = base[:-1] + mapa_acento.get(base[-1], base[-1])
+        if base.endswith(('á', 'í', 'e')): 
+             mapa = {'á': 'a', 'í': 'i', 'é': 'e'}
+             sem_acento = base[:-1] + mapa.get(base[-1], base[-1])
              if palavra_existe(sem_acento + 'r'): return sem_acento + 'r'
-             if palavra_existe(sem_acento + 'er'): return sem_acento + 'er' # Possível -> Poder (Irregular)
+             if palavra_existe(sem_acento + 'er'): return sem_acento + 'er'
 
     return original
 
@@ -454,7 +521,7 @@ def formatar_palavra(palavra):
     Formata a palavra para exibição (primeira letra maiúscula).
     """
     if not(palavra_existe(palavra)):
-        return False
+        return "NAO ENCONTROU PALAVRA"
     
     palavra = padronizar_plural(palavra)
     palavra = padronizar_genero(palavra)
@@ -661,47 +728,146 @@ def testar_padronizar_verbo():
         status = "✨ Mudou" if res != t else "  Mantido"
         print(f"{t:<25} | {res:<20} {status}")
 
-def testar_padronizar_derivacoes():
-    print("\n\n==================== TESTANDO PADRONIZAR_DERIVAÇÕES ====================\n")
+def padronizar_derivacoes(palavra):
+    """
+    Tenta remover sufixos nominais (profissão, qualidade, ação).
+    Com Lista de Proteção GLOBAL no início para evitar falsos positivos em qualquer regra.
+    """
+    original = palavra.lower().strip()
+    
+    # Trava de segurança para palavras muito curtas
+    if len(original) < 4:
+        return original
 
-    lista_testes = [
-        # --- 1. Advérbios (-mente) ---
-        ("rapidamente", "rápido"),   # Volta para masculino
-        ("felizmente", "feliz"),     # Volta para base
-        
-        # --- 2. Profissões (-eiro, -ista) ---
-        ("pedreiro", "pedra"),       # -eiro -> -a
-        ("limoeiro", "limão"),       # -eiro -> -ão (reconstrução)
-        ("dentista", "dente"),       # -ista -> -e
-        ("jornalista", "jornal"),    # -ista -> base
-        
-        # --- 3. Qualidade (-ez, -dade, -ura) ---
-        ("beleza", "belo"),          # -eza -> -o
-        ("rapidez", "rápido"),       # -ez -> -o
-        ("felicidade", "feliz"),     # -ci+dade -> -z
-        ("bondade", "bom"),          # -n+dade -> -m
-        ("altura", "alto"),          # -ura -> -o
-        
-        # --- 4. Ação (-mento, -ção) ---
-        ("casamento", "casar"),      # -mento -> -r
-        ("criação", "criar"),        # -ção -> -r
-        ("navegação", "navegar"),    # -ção -> -ar
-        
-        # --- 5. Adjetivos (-oso, -al, -vel) ---
-        ("famoso", "fama"),          # -oso -> -a
-        ("mundial", "mundo"),        # -al -> -o
-        ("amável", "amar"),          # -vel -> -r (tira acento)
-        
-        # --- Controle ---
-        ("computador", "computador") # Não deriva
+    # --- LISTA DE PROTEÇÃO GLOBAL (Exceções Semânticas) ---
+    # Palavras que existem, parecem derivadas, mas NÃO devem ser alteradas.
+    protegidas = [
+        # Colisões de -AL
+        'animal',       # Evita 'animo'
+        'jornal',       # Evita 'jorno' (se existisse)
+        'hospital',     # Evita 'hospito'
+        'general',      # Evita 'gênero'
+        'local',        # Evita 'louco' (se regra for agressiva)
+        'sinal',        # Evita 'sino'
+        'capital',      # Evita 'capito'
+        'oficial',      # Evita 'ofício' (sentidos distintos)
+        'final',        # Evita 'fino'
+
+        # Colisões de -ÃO
+        'coração', 'coracao', 
+        'nação', 'nacao',
+        'ração', 'racao',
+        'fração', 'fracao',
+        'canção', 'cancao',
+        'feijão', 'feijao',
+        'violão', 'violao',
+        'avião', 'aviao',
+        'verão', 'verao',
+        'melão', 'melao',
+        'leão', 'leao',
+        'camaleão', 'camaleao',
+        'furacão', 'furacao',
+        'tubarão', 'tubarao',
+        'mão', 'mao', 'pão', 'pao', 'chão', 'chao'
     ]
+    
+    if original in protegidas:
+        return original
 
-    print(f"{'ENTRADA':<25} | {'SAÍDA PADRONIZADA (DERIVAÇÃO)'}")
-    print("-" * 60)
-    for entrada, esperado in lista_testes:
-        res = padronizar_derivacoes(entrada)
-        status = "✅ OK" if res == esperado else f"❌ Falhou (Deu: {res})"
-        print(f"{entrada:<25} | {res:<20} {status}")
+    # --- 1. BLOCO DE TRATAMENTO DE -ÃO / -ÇÃO ---
+    if original.endswith('ão'):
+        base_sem_ao = original[:-2]
+
+        # Tenta aumentativo masculino (-o)
+        candidato = base_sem_ao + 'o'
+        if palavra_existe(candidato): return candidato
+
+        # Tenta aumentativo feminino (-a)
+        candidato = base_sem_ao + 'a'
+        if palavra_existe(candidato): return candidato
+
+        # Tenta derivação verbal (-ção -> -r / -ar)
+        if original.endswith('ção'):
+            base_sem_cao = original[:-3]
+            if palavra_existe(base_sem_cao + 'r'): return base_sem_cao + 'r'
+            if palavra_existe(base_sem_cao + 'ar'): return base_sem_cao + 'ar'
+        
+        return original
+
+    # --- 2. ADVÉRBIOS (-MENTE) ---
+    if original.endswith('mente'):
+        base = original[:-5]
+        if palavra_existe(base): return base
+        if base.endswith('a'):
+            candidato = base[:-1] + 'o'
+            if palavra_existe(candidato): return candidato
+
+    # --- 3. PROFISSÕES E ÁRVORES (-EIRO / -EIRA / -ISTA) ---
+    if original.endswith(('eiro', 'eira')):
+        base = original[:-4]
+        if palavra_existe(base + 'a'): return base + 'a'
+        if palavra_existe(base + 'o'): return base + 'o'
+        if palavra_existe(base + 'e'): return base + 'e'
+        if base.endswith('o') and palavra_existe(base[:-1] + 'ão'): 
+            return base[:-1] + 'ão'
+
+    if original.endswith('ista'):
+        base = original[:-4]
+        if palavra_existe(base): return base
+        if palavra_existe(base + 'a'): return base + 'a' 
+        if palavra_existe(base + 'o'): return base + 'o'
+
+    # --- 4. QUALIDADE E ESTADO (-EZ / -EZA / -DADE / -URA / -ISMO) ---
+    if original.endswith(('eza', 'ez')):
+        tamanho = 3 if original.endswith('eza') else 2
+        base = original[:-tamanho]
+        if palavra_existe(base + 'o'): return base + 'o'
+        if palavra_existe(base): return base
+
+    if original.endswith('dade'):
+        base = original[:-4]
+        if base.endswith('ci'):
+            if palavra_existe(base[:-2] + 'z'): return base[:-2] + 'z'
+        if base.endswith('n'):
+             if palavra_existe(base[:-1] + 'm'): return base[:-1] + 'm'
+        if palavra_existe(base): return base
+        if base.endswith('i') and palavra_existe(base[:-1] + 'il'): return base[:-1] + 'il'
+
+    if original.endswith('ismo'):
+        base = original[:-4]
+        if palavra_existe(base): return base
+        if palavra_existe(base + 'o'): return base + 'o'
+
+    if original.endswith('ura'):
+        base = original[:-3]
+        if palavra_existe(base + 'o'): return base + 'o'
+        if palavra_existe(base + 'e'): return base + 'e'
+
+    # --- 5. AÇÃO E RESULTADO (-MENTO) ---
+    if original.endswith('mento'):
+        base = original[:-5]
+        if palavra_existe(base + 'r'): return base + 'r'
+        if palavra_existe(base): return base
+
+    # --- 6. ADJETIVOS (-OSO / -AL / -VEL) ---
+    if original.endswith(('oso', 'osa')):
+        base = original[:-3]
+        if palavra_existe(base + 'o'): return base + 'o'
+        if palavra_existe(base + 'a'): return base + 'a'
+
+    if original.endswith('al'):
+        base = original[:-2]
+        if palavra_existe(base + 'o'): return base + 'o'
+
+    if original.endswith('vel'):
+        base = original[:-3]
+        if base.endswith(('á', 'í', 'e')): 
+             mapa = {'á': 'a', 'í': 'i', 'é': 'e'}
+             sem_acento = base[:-1] + mapa.get(base[-1], base[-1])
+             if palavra_existe(sem_acento + 'r'): return sem_acento + 'r'
+             if palavra_existe(sem_acento + 'er'): return sem_acento + 'er'
+
+    return original
 
 def testar_formatar_palavra_completo():
     print("\n" + "="*80)
@@ -801,7 +967,7 @@ def testar_formatar_palavra_completo():
         ("felizmente", "feliz"),
         ("pedreiro", "pedra"),
         ("limoeiro", "limão"),
-        ("dentista", "dente"),
+        ("dentista", "dentista"),
         ("jornalista", "jornal"),
         ("beleza", "belo"),
         ("rapidez", "rápido"),
@@ -825,6 +991,8 @@ def testar_formatar_palavra_completo():
     print(f"{'ENTRADA':<20} | {'RESULTADO':<15} | {'STATUS':<10}")
     print("-" * 60)
 
+    contador = 0
+
     for entrada, esperado in lista_testes:
         resultado = formatar_palavra(entrada)
         
@@ -832,20 +1000,23 @@ def testar_formatar_palavra_completo():
         if resultado == esperado:
             status = "✅ OK"
         else:
+            contador += 1
             status = f"❌ Deu: {resultado}"
             
-        print(f"{entrada:<20} | {resultado:<15} | {status}")
+        print(f"{entrada:<20} | {esperado:<15} | {status}")
+    
+    print(contador, "testes falharam." if contador > 0 else "Todos os testes passaram com sucesso!")
 
 def teste_unitario():
     print("\n" + "="*80)
     print(f"{'TESTE UNIFICADO: FORMATAR_PALAVRA (PIPELINE COMPLETO)':^80}")
     print("="*80 + "\n")
     
-    print("PADRONIZAR_PLURAL:     ", padronizar_plural("nuvens"))
-    print("PADRONIZAR_GÊNERO:     ", padronizar_genero("nuvem"))
-    print("PADRONIZAR_GRAU:       ", padronizar_grau("nuvem"))
-    print("PADRONIZAR_VERBO :     ", padronizar_verbo("nuvem"))
-    print("PADRONIZAR_DERIVAÇÕES: ", padronizar_derivacoes("nuvem"))
+    print("PADRONIZAR_PLURAL:     ", padronizar_plural("casas"))
+    print("PADRONIZAR_GÊNERO:     ", padronizar_genero("casa"))
+    print("PADRONIZAR_GRAU:       ", padronizar_grau("casa"))
+    print("PADRONIZAR_VERBO :     ", padronizar_verbo("casa"))
+    print("PADRONIZAR_DERIVAÇÕES: ", padronizar_derivacoes("casa"))
 
 if __name__ == "__main__":
     # testar_palavra_existe()
@@ -854,6 +1025,6 @@ if __name__ == "__main__":
     # testar_padronizar_grau()
     # testar_padronizar_verbo()
     # testar_padronizar_derivacoes()
-    testar_formatar_palavra_completo()
+    # testar_formatar_palavra_completo()
     # teste_unitario()
     pass
