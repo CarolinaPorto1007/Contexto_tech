@@ -1,23 +1,14 @@
 import bisect
 import os
 
-# SIGLAS VÁLIDAS
-WHITELIST_CURTAS = {
-    "api", "app", "web", "bot", "bug", "dev", "git", "hub", "net", 
-    "sql", "ssl", "ssh", "tcp", "udp", "vpn", "wan", "lan", "dns",
-    "mac", "ip",  "cpu", "gpu", "ram", "rom", "ssd", "hdd", "usb", 
-    "led", "lcd", "iot", "xml", "json", "jar", "zip", "rar", "exe",
-    "bin", "hex", "bit", "byte", "log", "npm", "pip", "kde", "gnome",
-    "ux",  "ui",  "seo", "aws", "gcp", "azure", "poo", "mvc", "dao"
-}
 
-# DEFINIÇÃO DO CAMINHO DO ARQUIVO DE PALAVRAS
+
+# DEFININDO O CAMINHO DOS ARQUIVOS DE PALAVRAS
 DIRETORIO_SCRIPT = os.path.dirname(os.path.abspath(__file__))
 CAMINHO_ARQUIVO = os.path.join(DIRETORIO_SCRIPT, "..", "base_palavras", "com_acento.txt")
-CAMINHO_ARQUIVO = os.path.normpath(CAMINHO_ARQUIVO)
+CAMINHO_TECH = os.path.normpath(os.path.join(DIRETORIO_SCRIPT, "..", "base_palavras", "palavras_tecnologia.txt"))
 
-
-# CARREGAMENTO DO BANCO DE DADOS
+# CARREGANDO TABELA DE PALAVRAS ORDENADAS
 try:
     with open(CAMINHO_ARQUIVO, "r", encoding="utf-8") as f:
         # Carrega removendo espaços e quebras de linha
@@ -27,19 +18,28 @@ except FileNotFoundError:
     print(f"❌ ERRO CRÍTICO: Arquivo não encontrado no caminho:\n{CAMINHO_ARQUIVO}")
     TABELA_PALAVRAS_ORDENADAS = []
 
+# CARREGANDO TABELA DE PALAVRAS DE TECNOLOGIA
+try:
+    with open(CAMINHO_TECH, "r", encoding="utf-8") as f:
+        TABELA_PALAVRAS_TECNOLOGIA = {linha.strip().lower() for linha in f if linha.strip()}
+except FileNotFoundError:
+    TABELA_PALAVRAS_TECNOLOGIA = set()
 
 
 
-# BUSCA BINÁRIA NA TABELA DE PALAVRAS
+# INICIANDO FILTRAGEM E PADRONIZAÇÃO DE PALAVRAS
 def palavra_existe(palavra):
     """
-    Verifica se a palavra existe no banco de dados usando Busca Binária.
+    Verifica se a palavra existe nas tabelas de dados usando busca binária.
     Complexidade: O(log N) - Extremamente rápido.
     """
     if not TABELA_PALAVRAS_ORDENADAS:
         return False
         
-    # Normaliza a entrada: tudo minúsculo e sem espaços nas pontas
+    if palavra in TABELA_PALAVRAS_TECNOLOGIA:
+        return palavra
+    
+    # Normaliza a entrada com tudo minúsculo e sem espaços nas pontas
     palavra = palavra.lower().strip()
     
     # O bisect_left encontra a posição de inserção para manter a ordem
@@ -515,7 +515,8 @@ def padronizar_derivacoes(palavra):
     return original
 
 
-# FORMATANDO PALAVRA PARA EXIBIÇÃO
+
+# FORMATANDO PALAVRA PARA EXIBIÇÃO NO FRONTEND
 def formatar_palavra(palavra):
     """
     Formata a palavra para exibição (primeira letra maiúscula).
@@ -530,6 +531,7 @@ def formatar_palavra(palavra):
     palavra = padronizar_derivacoes(palavra)
 
     return palavra
+
 
 
 # TESTES RÁPIDOS
