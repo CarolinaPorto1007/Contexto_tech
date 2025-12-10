@@ -4,9 +4,10 @@ from gensim.models import KeyedVectors
 import unicodedata
 from datetime import datetime, timedelta
 import hashlib
+from spellchecker import SpellChecker
 
 # Arquivos auxiliares
-from routes import teste_filtro
+from routes import input_filter
 from routes.model_loader import word2vec
 
 """
@@ -233,6 +234,11 @@ PALAVRAS_TECNOLOGIA = [
     "unicast"
 ]
 
+spell = SpellChecker(language="pt")
+
+def is_valida(p):
+    return p.lower() in spell.word_frequency
+
 def normalizar_texto(texto):
     """Remove acentos e normaliza o texto para comparação"""
     texto = texto.lower().strip()
@@ -362,6 +368,29 @@ def inicializar_jogo():
     tentativas_historico = []
     
     print(f"🎮 Palavra do dia: {palavra_secreta} (Data: {data_palavra})")
+    i = 0
+    
+    palavras = set()
+
+    max_sim = None
+
+    with open("saida.txt", "w", encoding="utf8") as f:
+        i = 0
+        for palavra, similaridade in word2vec.most_similar(palavra_secreta, topn=720000):
+            formatada = input_filter.formatar_palavra(palavra, False)
+
+            if is_valida(formatada) and formatada not in palavras:
+                if (max_sim is None):
+                    max_sim = similaridade
+
+                i += 1
+                palavras.add(formatada)
+
+                linha = f"{formatada}, {(similaridade/max_sim) * 100:.2f}\n"
+                f.write(linha)
+
+                # print(linha, end="")
+
 
 def verificar_reset_diario():
     """Verifica se precisa resetar o jogo para um novo dia"""
@@ -398,25 +427,11 @@ def tentar():
     # Obtém a palavra tentada
     tentativa = request.json.get('palavra', '').lower().strip()
 
-    tentativa = teste_filtro.remover_aumentativo(tentativa)
 
-    tentativa = teste_filtro.remover_diminutivo(tentativa)
-
-    tentativa = teste_filtro.obter_singular(tentativa)
-
-    if teste_filtro.possui_caracteres_invalidos(tentativa):
-        return jsonify({"erro": "Não utilize números ou símbolos, apenas letras!"})
-
-    if not teste_filtro.palavra_existe(tentativa):
+    tentativa = input_filter.formatar_palavra(tentativa)
+    if tentativa == False:
         return jsonify({"erro": "Palavra desconhecida ou inválida! Verifique a ortografia."})
     
-
-    if not tentativa:
-        return jsonify({"erro": "Digite uma palavra válida."})
-    
-    # Verifica se é palavra única
-    if ' ' in tentativa:
-        return jsonify({"erro": "Apenas palavras únicas são aceitas (sem espaços)."})
     
     # Verifica se já tentou essa palavra
     if tentativa in tentativas_historico:
